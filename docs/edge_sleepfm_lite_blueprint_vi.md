@@ -282,8 +282,42 @@ test_df.write.mode("overwrite").parquet(f"{SPLIT_PATH}/test")
 ### 8.4 HDF5 canonical (preprocessing EDF→HDF5)
 
 ```bash
-# Colab cell (chạy script của repo sleepfm-clinical hoặc custom)
-# Ví dụ: python preprocessing/preprocessing.py --input ... --output ...
+# Colab cell (clone repo gốc và chạy preprocessing)
+!git clone https://github.com/zou-group/sleepfm-clinical.git
+%cd sleepfm-clinical
+
+# Chạy preprocessing, trỏ input/output đến RAW_DIR/HDF5_DIR đã mount
+!python preprocessing/preprocessing.py --input_dir "${RAW_DIR}" --output_dir "${HDF5_DIR}"
+```
+
+Kiểm tra keys HDF5 thực tế và đối chiếu với các key mong đợi:
+
+```python
+import h5py
+from pathlib import Path
+
+expected_keys = {
+    "signals/eeg",
+    "signals/ppg",
+    "signals/acc",
+    "labels/stage",
+    "labels/osa",
+}
+
+hdf5_path = Path(HDF5_DIR) / "your_file.h5"  # TODO: đổi đúng tên file
+with h5py.File(hdf5_path, "r") as f:
+    actual_keys = set()
+
+    def collect_keys(name, obj):
+        if isinstance(obj, h5py.Dataset):
+            actual_keys.add(name)
+
+    f.visititems(collect_keys)
+
+missing = expected_keys - actual_keys
+extra = actual_keys - expected_keys
+print("Missing keys:", missing)
+print("Extra keys:", extra)
 ```
 
 ### 8.5 Job B — Epoch Store Builder (Spark)
